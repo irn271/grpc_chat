@@ -12,7 +12,5 @@ service ChatService {
   rpc SayHello(Message) returns (Message) {}
 }
 
-// protoc --go_out=plugins=grpc:chat chat.proto
 
-// go get -u github.com/golang/protobuf/protoc-gen-go
 // protoc --go_out=plugins=grpc:chat chat.proto`
