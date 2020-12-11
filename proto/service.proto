@@ -24,7 +24,7 @@ message Close{}
 
 service BroadCast {
   rpc CreateStream(Connect) returns (stream Message);
-  rpc BroadcastMessage(Message) returns (Close);
+  rpc BroadCastMessage(Message) returns (Close);
 }
 
 // protoc --go_out=plugins=grpc:. proto/service.proto

@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"grpc_chat/proto"
 	"grpc_chat/proto/github.com/irn271/grpc_chat"
 	"os"
 
@@ -18,7 +17,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var client proto.BroadcastClient
+var client proto.BroadCastClient
 var wait *sync.WaitGroup
 
 func init() {
