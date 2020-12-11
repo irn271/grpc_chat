@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "https://github.com/irn271/grpc_chat;grpc_chat";
-
 package chat;
+
+option go_package = "github.com/irn271/grpc_chat;grpc_chat";
 
 message Message {
   string body = 1;
@@ -13,4 +13,4 @@ service ChatService {
 }
 
 
-// protoc --go_out=plugins=grpc:chat chat.proto`
+// protoc --go_out=plugins=grpc:chat chat.proto
