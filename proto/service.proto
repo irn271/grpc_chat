@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "proto/github.com/irn271/grpc_chat;grpc_chat/proto";
+
+message User {
+  string id = 1;
+  string name = 2;
+}
+
+message Message {
+  string id = 1;
+  string content = 2;
+  string timestamp = 3;
+}
+
+message Connect {
+  User user = 1;
+  bool active = 2;
+}
+
+message Close{}
+
+service BroadCast {
+  rpc CreateStream(Connect) returns (stream Message);
+  rpc BroadCastMessage(Message) returns (Close);
+}
+
+// protoc --go_out=plugins=grpc:. proto/service.proto
