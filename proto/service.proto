@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "proto/github.com/irn271/grpc_chat;grpc_chat/proto";
+option go_package = "proto/github.com/irn271/grpc_chat;grpc_chat_proto";
 
 message User {
   string id = 1;
@@ -24,7 +24,8 @@ message Close{}
 
 service BroadCast {
   rpc CreateStream(Connect) returns (stream Message);
-  rpc BroadCastMessage(Message) returns (Close);
+  rpc BroadcastMessage(Message) returns (Close);
 }
 
 // protoc --go_out=plugins=grpc:. proto/service.proto
+// option go_package = "proto/github.com/irn271/grpc_chat;grpc_chat_proto";

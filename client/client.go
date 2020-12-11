@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"grpc_chat/proto"
+	"grpc_chat/proto/github.com/irn271/grpc_chat"
 	"os"
 
 	"encoding/hex"
