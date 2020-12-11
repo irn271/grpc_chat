@@ -1,102 +1,70 @@
 package main
 
 import (
-	"bufio"
-	"crypto/sha256"
-	"flag"
-	"fmt"
-	"grpc_chat/proto/github.com/irn271/grpc_chat"
-	"os"
-
-	"encoding/hex"
+	"grpc_chat/proto"
 	"log"
+	"net"
+	"os"
 	"sync"
-	"time"
 
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+	glog "google.golang.org/grpc/grpclog"
 )
 
-var client proto.BroadCastClient
-var wait *sync.WaitGroup
+var grpcLog glog.LoggerV2
 
 func init() {
-	wait = &sync.WaitGroup{}
+	grpcLog = glog.NewLoggerV2(os.Stdout, os.Stdout, os.Stdout)
 }
 
-func connect(user *proto.User) error {
-	var streamerror error
+type Connection struct {
+	stream proto.BroadCast_CreateStreamServer
+	id     string
+	active bool
+	error  chan error
+}
 
-	stream, err := client.CreateStream(context.Background(), &proto.Connect{
-		User:   user,
-		Active: true,
-	})
+type Server struct {
+	Connection []*Connection
+}
 
-	if err != nil {
-		return fmt.Errorf("connection failed: %v", err)
+func (s *Server) CreateStream(pconn *proto.Connect, stream proto.BroadCast_CreateStreamServer) error {
+	conn := &Connection{
+		stream: stream,
+		id:     pconn.User.Id,
+		active: true,
+		error:  make(chan error),
 	}
 
-	wait.Add(1)
-	go func(str proto.Broadcast_CreateStreamClient) {
-		defer wait.Done()
+	s.Connection = append(s.Connection, conn)
 
-		for {
-			msg, err := str.Recv()
-			if err != nil {
-				streamerror = fmt.Errorf("Error reading message: %v", err)
-				break
-			}
-
-			fmt.Printf("%v : %s\n", msg.Id, msg.Content)
-
-		}
-	}(stream)
-
-	return streamerror
+	return <-conn.error
 }
 
-func main() {
-	timestamp := time.Now()
+func (s *Server) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto.Close, error) {
+	wait := sync.WaitGroup{}
 	done := make(chan int)
 
-	name := flag.String("N", "Anon", "The name of the user")
-	flag.Parse()
+	for _, conn := range s.Connection {
+		wait.Add(1)
 
-	id := sha256.Sum256([]byte(timestamp.String() + *name))
+		go func(msg *proto.Message, conn *Connection) {
+			defer wait.Done()
 
-	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Couldnt connect to service: %v", err)
-	}
+			if conn.active {
+				err := conn.stream.Send(msg)
+				grpcLog.Info("Sending message to: ", conn.stream)
 
-	client = proto.NewBroadcastClient(conn)
-	user := &proto.User{
-		Id:   hex.EncodeToString(id[:]),
-		Name: *name,
-	}
-
-	connect(user)
-
-	wait.Add(1)
-	go func() {
-		defer wait.Done()
-
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			msg := &proto.Message{
-				Id:        user.Id,
-				Content:   scanner.Text(),
-				Timestamp: timestamp.String(),
+				if err != nil {
+					grpcLog.Errorf("Error with Stream: %v - Error: %v", conn.stream, err)
+					conn.active = false
+					conn.error <- err
+				}
 			}
+		}(msg, conn)
 
-			_, err := client.BroadcastMessage(context.Background(), msg)
-			if err != nil {
-				fmt.Printf("Error Sending Message: %v", err)
-				break
-			}
-		}
-
-	}()
+	}
 
 	go func() {
 		wait.Wait()
@@ -104,4 +72,22 @@ func main() {
 	}()
 
 	<-done
+	return &proto.Close{}, nil
+}
+
+func main() {
+	var connections []*Connection
+
+	server := &Server{connections}
+
+	grpcServer := grpc.NewServer()
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalf("error creating the server %v", err)
+	}
+
+	grpcLog.Info("Starting server at port :8080")
+
+	proto.RegisterBroadCastServer(grpcServer, server)
+	grpcServer.Serve(listener)
 }

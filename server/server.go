@@ -19,7 +19,7 @@ func init() {
 }
 
 type Connection struct {
-	stream proto.Broadcast_CreateStreamServer
+	stream proto.BroadCast_CreateStreamServer
 	id     string
 	active bool
 	error  chan error
@@ -29,7 +29,7 @@ type Server struct {
 	Connection []*Connection
 }
 
-func (s *Server) CreateStream(pconn *proto.Connect, stream proto.Broadcast_CreateStreamServer) error {
+func (s *Server) CreateStream(pconn *proto.Connect, stream proto.BroadCast_CreateStreamServer) error {
 	conn := &Connection{
 		stream: stream,
 		id:     pconn.User.Id,
@@ -88,6 +88,6 @@ func main() {
 
 	grpcLog.Info("Starting server at port :8080")
 
-	proto.RegisterBroadcastServer(grpcServer, server)
+	proto.RegisterBroadCastServer(grpcServer, server)
 	grpcServer.Serve(listener)
 }
